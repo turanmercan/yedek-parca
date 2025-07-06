@@ -37,7 +37,7 @@
         "type": "item",
         "vehicle_numbers": ["13--5003"],
         "source_type": "pdf",
-        "source_path": "catalogs/ford-cargo-1826.pdf",
+        "source_path": "yedek-parca-katalogu/ford-cargo-1826.pdf",
         "icon": "fas fa-file-pdf"
       },
       {
