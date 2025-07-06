@@ -11,7 +11,7 @@
         "type": "item",
         "vehicle_numbers": ["14--1233", "14--1231"],
         "source_type": "pdf",
-        "source_path": "catalogs/bmc-fatih-170-25.pdf",
+        "source_path": "yedek-parca-katalogu/bmc-fatih-170-25.pdf",
         "icon": "fas fa-file-pdf"
       },
       {
