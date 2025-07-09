@@ -46,7 +46,7 @@
         "type": "item",
         "vehicle_numbers": ["FORD CARGO, 1832 ARACI, YEDEK PARÇA KATALOGU"],
         "source_type": "pdf",
-        "source_path": "catalogs/ford-cargo-1832d.pdf",
+        "source_path": "yedek-parca-katalogu/ford-cargo-1832d.pdf",
         "icon": "fas fa-file-pdf"
       },
       {
