@@ -314,7 +314,7 @@
         "name": "Fiat_Kobelco_W130 Lastikli Yükleyici",
         "type": "item",
         "vehicle_numbers": ["04--5098"],
-        "normalized_vehicle_numbers": ["045098"]
+        "normalized_vehicle_numbers": ["045098"],
         "source_type": "pdf",
         "source_path": "yedek-parca-katalogu/fiat-kobelco-w130.pdf",
         "icon": "fas fa-file-pdf"
