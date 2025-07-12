@@ -4,23 +4,22 @@ document.addEventListener('DOMContentLoaded', function() {
     const searchByNumberBtn = document.getElementById('searchByNumberBtn');
     const searchMessage = document.getElementById('searchMessage');
     const welcomeSection = document.getElementById('welcomeSection');
-    // PDF görüntüleyici ile ilgili DOM elementlerine artık doğrudan ihtiyacımız yok
-    // const contentViewer = document.getElementById('contentViewer');
-    // const pdfViewerContainer = document.querySelector('.pdf-viewer-container');
-    // const pdfFrame = document.getElementById('pdfFrame');
 
-    let allCatalogsData = [];
+    let allCatalogsData = []; // Tüm JSON verisini tutacak global değişken
 
+    // data.json dosyasını yükle
     fetch('data.json')
         .then(response => {
             if (!response.ok) {
+                // Hata durumunda HTTP statüsünü de göster
                 throw new Error('data.json yüklenemedi: ' + response.statusText);
             }
             return response.json();
         })
         .then(data => {
-            allCatalogsData = data;
-            createCatalogTree(data, catalogTree);
+            allCatalogsData = data; // Yüklenen veriyi global değişkene ata
+            createCatalogTree(data, catalogTree); // Katalog ağacını oluştur
+            console.log("Katalog verileri başarıyla yüklendi.");
         })
         .catch(error => {
             console.error('Katalog verisi yüklenirken bir hata oluştu:', error);
@@ -29,7 +28,7 @@ document.addEventListener('DOMContentLoaded', function() {
             searchMessage.style.color = 'red';
         });
 
-    // Menüyü (soy ağacını) dinamik olarak oluşturan fonksiyon
+    // Menüyü (katalog ağacını) dinamik olarak oluşturan fonksiyon
     function createCatalogTree(items, parentElement) {
         items.forEach(item => {
             const listItem = document.createElement('li');
@@ -51,12 +50,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     event.preventDefault();
                     const subMenu = listItem.querySelector('ul');
                     if (subMenu) {
+                        // Diğer açık alt menüleri kapat
                         catalogTree.querySelectorAll('li.has-submenu > ul').forEach(function(ul) {
                             if (ul !== subMenu && ul.style.maxHeight !== '0px') {
                                 ul.style.maxHeight = '0px';
                                 ul.parentElement.classList.remove('active');
                             }
                         });
+                        // Tıklanan alt menüyü aç/kapat
                         if (subMenu.style.maxHeight === '0px' || subMenu.style.maxHeight === '') {
                             subMenu.style.maxHeight = subMenu.scrollHeight + 'px';
                             listItem.classList.add('active');
@@ -82,12 +83,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 link.addEventListener('click', function(event) {
                     event.preventDefault();
                     // Her zaman yeni sekmede aç
-                    window.open(this.dataset.sourcePath, '_blank'); 
+                    window.open(this.dataset.sourcePath, '_blank');
+
                     // Aktif linki işaretle
                     catalogTree.querySelectorAll('li a').forEach(a => a.classList.remove('current-active-pdf'));
                     this.classList.add('current-active-pdf');
                     // Yeni sekme açıldığı için içerik görünümünü başlangıca döndür
-                    resetContentView(); 
+                    resetContentView();
                 });
                 listItem.appendChild(link);
             }
@@ -95,21 +97,18 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Katalog kaynağını gösterme fonksiyonu (artık sadece window.open çağıracak)
-    // showCatalogSource fonksiyonuna artık doğrudan ihtiyaç yok, çünkü window.open direkt çağrılıyor.
-    // Ancak performSearch içinde hala çağrılıyor, o yüzden onu da güncelleyeceğiz.
-    
     // İçerik alanını başlangıç durumuna (Hoş Geldiniz) döndüren fonksiyon
     function resetContentView() {
         welcomeSection.style.display = 'block'; // Hoş geldiniz mesajını göster
-        // pdfViewerContainer.style.display = 'none'; // PDF görüntüleyici divi gizle (HTML'den kaldırabiliriz)
-        // pdfFrame.src = ''; // iframe içeriğini temizle (HTML'den kaldırabiliriz)
+        // PDF görüntüleyici ile ilgili eski yorum satırları çıkarıldı, çünkü artık doğrudan window.open kullanılıyor.
         catalogTree.querySelectorAll('li a').forEach(a => a.classList.remove('current-active-pdf'));
     }
 
+    // --- Araç Numarası ile Arama Fonksiyonları ---
 
-    // Araç Numarası ile Arama Fonksiyonu
+    // Arama butonuna tıklama olayını dinle
     searchByNumberBtn.addEventListener('click', performSearch);
+    // Arama kutusunda Enter tuşuna basma olayını dinle
     vehicleNumberInput.addEventListener('keydown', function(event) {
         if (event.key === 'Enter') {
             performSearch();
@@ -117,9 +116,9 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     function performSearch() {
-        const searchTerm = vehicleNumberInput.value.trim().toUpperCase();
-        searchMessage.textContent = '';
-        searchMessage.style.color = 'initial';
+        const searchTerm = vehicleNumberInput.value.trim(); // Girişteki boşlukları temizle
+        searchMessage.textContent = ''; // Önceki mesajı temizle
+        searchMessage.style.color = 'initial'; // Renki sıfırla
 
         if (searchTerm === '') {
             searchMessage.textContent = 'Lütfen bir araç numarası girin.';
@@ -128,45 +127,66 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
+        // Kullanıcının girdisini normalleştir (tüm tireleri ve boşlukları kaldır, büyük harf yap)
+        const normalizedSearchTerm = searchTerm.replace(/[- ]/g, '').toUpperCase();
+
         let foundItem = null;
+
+        // allCatalogsData üzerinde özyinelemeli (recursive) arama fonksiyonu
         function searchInItems(items) {
             for (const item of items) {
                 if (item.type === 'item') {
-                    if (item.vehicle_numbers && item.vehicle_numbers.some(num => num.toUpperCase().includes(searchTerm))) {
-                        foundItem = item;
-                        return true;
+                    // Eğer item bir ürün (katalog) ise vehicle_numbers dizisini kontrol et
+                    if (item.vehicle_numbers && Array.isArray(item.vehicle_numbers)) {
+                        for (const vehicleNum of item.vehicle_numbers) {
+                            // JSON'daki her bir araç numarasını normalleştir (tireleri ve boşlukları kaldır, büyük harf yap)
+                            const normalizedJsonNum = String(vehicleNum).replace(/[- ]/g, '').toUpperCase();
+
+                            // Normalize edilmiş değerleri karşılaştır
+                            if (normalizedJsonNum === normalizedSearchTerm) {
+                                foundItem = item;
+                                return true; // Eşleşme bulundu, aramayı durdur
+                            }
+                        }
                     }
                 } else if (item.type === 'category' && item.children) {
+                    // Eğer item bir kategori ise çocuklarını ara
                     if (searchInItems(item.children)) {
-                        return true;
+                        return true; // Alt kategorilerde bulundu, aramayı durdur
                     }
                 }
             }
-            return false;
+            return false; // Bulunamadı
         }
 
+        // Tüm katalog verisinde aramayı başlat
         searchInItems(allCatalogsData);
 
         if (foundItem) {
             searchMessage.textContent = `Bulundu: ${foundItem.name}`;
             searchMessage.style.color = 'green';
-            
-            // Arama sonucunda da her zaman yeni sekmede aç
-            window.open(foundItem.source_path, '_blank'); 
 
-            // Menüde ilgili öğeyi işaretle ve aç
+            // Arama sonucunda da her zaman yeni sekmede aç
+            window.open(foundItem.source_path, '_blank');
+
+            // Menüde ilgili öğeyi işaretle ve kategorilerini aç
             catalogTree.querySelectorAll('li a').forEach(a => a.classList.remove('current-active-pdf'));
-            const correspondingLink = Array.from(catalogTree.querySelectorAll('li a')).find(link => link.dataset.sourcePath === foundItem.source_path);
+            // Doğru linki source_path üzerinden bul
+            const correspondingLink = Array.from(catalogTree.querySelectorAll('li a'))
+                .find(link => link.dataset.sourcePath === foundItem.source_path);
+
             if (correspondingLink) {
                 correspondingLink.classList.add('current-active-pdf');
                 let parentUl = correspondingLink.closest('ul');
-                while(parentUl && parentUl.classList.contains('submenu') && parentUl.style.maxHeight === '0px') {
+                // Üst menüleri açmak için döngü
+                while (parentUl && parentUl.classList.contains('submenu') && parentUl.style.maxHeight === '0px') {
                     parentUl.style.maxHeight = parentUl.scrollHeight + 'px';
-                    parentUl.parentElement.classList.add('active');
-                    parentUl = parentUl.parentElement.closest('ul');
+                    parentUl.parentElement.classList.add('active'); // Üst kategoriye 'active' sınıfı ekle
+                    parentUl = parentUl.parentElement.closest('ul'); // Bir üst menüye geç
                 }
             }
-            resetContentView(); // Yeni sekme açıldığı için içerik görünümünü başlangıca döndür
+            // Yeni sekme açıldığı için içerik görünümünü başlangıca döndür
+            resetContentView();
 
         } else {
             searchMessage.textContent = `"${searchTerm}" numarasına sahip araç bulunamadı.`;
